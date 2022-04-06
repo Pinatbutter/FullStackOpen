@@ -1,2 +1,2 @@
-# FullStakOpen
-Part 0 
+# FullStackOpen
+
