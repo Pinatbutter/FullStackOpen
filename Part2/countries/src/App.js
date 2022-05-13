@@ -4,28 +4,25 @@ import axios from 'axios'
 const api_key = process.env.REACT_APP_API_KEY
 const InputCountry = ({onChange, text}) => <div>{text}<input onChange={onChange}/><br /><br/> </div>
 const DisplayCountryStats = ({country}) => {
-  console.log(typeof country)
-  if(!Array.isArray(country) && typeof country === 'object' ){
-    console.log(country.show)
-    if(country.show === "Hide"){
+  if(country.show === "Hide"){
       const listLanguages = Object.values(country.languages);
       return(
         <>
           <h1>{country.name}</h1>
-          <div>capital {country.capital}</div>
+          <div>capital {country.capital.map((element, index) =>{return index>0?  `, ${element}` : element}) }</div>
           <div>area {country.area}</div>
           <h3>languages:</h3>
           <ul>{listLanguages.map(language => <li key={language}>{language}</li>)}</ul>
           <img src={country.flag} alt="Flag" />
-          <h2>Weather in {country.capital}</h2>
-          <div>temperature {country.temperature}</div>
+          <h2>Weather in {country.capital[0]}</h2>
+          <div>temperature {country.temperature} celcius</div>
           <img src={country.climateImg} alt="weatherIcon" />
           <div>wind {country.wind} m/s</div>
           <br /> <br /> <br />
         </>
       )
     }
-  }
+  
 
 }
 
@@ -35,7 +32,7 @@ const ShowFilteredCountries = ({countries, handleShow}) => {
   if(typeof countries === 'string') return (<>{countries}</>)
   else if(countries.length === 1){
     return(<><DisplayCountryStats country={countries[0]}/></>) }
-    
+
   return(
    <>
     {countries.map((country, btnIndex)=>{
@@ -63,15 +60,15 @@ const App = () => {
       })
   }
   useEffect(hook, [])
-  
+
   const weatherHook = () => {
     let borderName = [];
+    let capitalName = '';
     basicStats.forEach((country, index) => {
-      console.log(country, country.lat)
+      capitalName = (country.capital[0]==='King Edward Point' ? 'King Edward' : country.capital[0])
       axios
-      .get(`https://api.openweathermap.org/data/2.5/weather?lat=${country.lat}&lon=${country.lon}&appid=${api_key}`)
+      .get(`https://api.openweathermap.org/data/2.5/weather?q=${capitalName}&appid=${api_key}&units=metric`)
       .then(response => {
-        console.log("KK");
         const stats = response.data;
         const countryObject = {
           show: country.show,
@@ -80,18 +77,12 @@ const App = () => {
           area: country.area,
           languages: country.languages,
           flag: country.flag,
-          lat: country.lat,
-          lon: country.lon,
           temperature: stats.main.temp,
           climateImg: `http://openweathermap.org/img/wn/${stats.weather[0].icon}@2x.png`,
           wind: stats.wind.speed
         }
         borderName.push(countryObject);
-        console.log(index, basicStats.length)
-        if (borderName.length === basicStats.length){
-          SetCountries(borderName);
-          console.log("ok")
-        }
+        if (borderName.length === basicStats.length) SetCountries(borderName);
       })
     })
   }
@@ -103,44 +94,25 @@ const App = () => {
 
     if (filterIndex.length===0 || countryInput === '') SetCountries("");
     else if(filterIndex.length > 10) SetCountries("Too many matches, specify another filter");
-    else if (filterIndex.length === 1) {
-      const countryObject = [{
-        show: "Hide",
-        name: filterIndex[0].name.common,
-        capital: filterIndex[0].capital,
-        area: filterIndex[0].area,
-        languages: filterIndex[0].languages,
-        flag: filterIndex[0].flags.png,
-        lat: filterIndex[0].latlng[0],
-        lon: filterIndex[0].latlng[1]
-      }]
-      SetBasicStats(countryObject)
-    }
-    else {
-      SetBasicStats((filterIndex.map(country =>{ 
+    else{
+      let initialShow = (filterIndex.length === 1) ? "Hide" : "Show";
+      SetBasicStats((filterIndex.map(country =>{
         const countryObject = {
-        show: "Show",
+        show: initialShow,
         name: country.name.common,
         capital: country.capital,
         area: country.area,
         languages: country.languages,
-        flag: country.flags.png,
-        lat: country.latlng[0],
-        lon: country.latlng[1]
+        flag: country.flags.png
       }
-      return countryObject
-    }) ));
+      return countryObject;
+    }) ))
     }
-    console.log('134')
   }
-  console.log(countryFilter, "COUNTRYFILTER")
   const handleShowCountry = (e) =>{
     let index = +e.target.id;
-    SetCountries(existingItems => {
-       return existingItems.map((item, j) => {
-        if(j===index){
-          item.show === "Show" ? item.show = "Hide"  : item.show = "Show";
-       }
+    SetCountries(existingItems => { return existingItems.map((item, j) => {
+        if( j === index ) item.show === "Show" ? item.show = "Hide"  : item.show = "Show";
         return item
       })
     })

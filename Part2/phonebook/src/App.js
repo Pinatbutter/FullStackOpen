@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-
+import contacts from './services/contacts'
+import './app.css'
 
 const Button = ({ onClick, text }) => <button onClick={onClick} type="submit"> {text} </button>;
+const Notification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+
+  return (
+    <div className={message.style}>
+      {message.text}
+    </div>
+  )
+}
+
 const ShowFilteredPerson = ({p, handleFilter}) =>{
   return(
      <>
@@ -20,61 +32,97 @@ const NewPersonForm = ({handleName, handleNumber, onSubmitForm}) => {
     </>
   )
 }
-const ShowPeople = ({p}) => p.map(person=><p key={person.name}>{person.name} {person.number}</p> );
-const CheckExistingNames = (persons, newName) => persons.map(person=> person.name.toLowerCase() ).includes(newName.toLowerCase());
+const ShowPeople = ({p, onDelete}) => p.map((person)=><p key={person.id}>{person.name} {person.number} <Button onClick={() => onDelete(person.id)} text={'delete'}/></p> );
+const CheckExistingNames = (persons, newName) => persons.map(person=> person.name.toLowerCase() ).indexOf(newName.toLowerCase());
 
 const App = () => {
   const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [personFiltered, setPersonFiltered] = useState({ name: ' ', number: ' '})
+  const [successMessage, setMessage] = useState(null)
 
   const hook = () => {
-    console.log('effect')
-    axios
-      .get('http://localhost:3001/persons')
+   contacts
+      .getAll()
       .then(response => {
         console.log('promise fulfilled')
         setPersons(response.data)
       })
   }
   useEffect(hook, [])
-  console.log('render', persons.length, 'notes')
+
+  console.log('render', personFiltered, 'notes')
 
   const handleNameChange  = (e) => setNewName(e.target.value)
   const handleNumberChange  = (e) => setNewNumber(e.target.value)
   const handleFilterChange  = (e) => {
-    const filterIndex = (persons.map(person=> person.name.toLowerCase()).indexOf(e.target.value.toLowerCase()))
-    filterIndex !== -1 ? setPersonFiltered({name: persons[filterIndex].name, number: persons[filterIndex].number } ) : setPersonFiltered({ name: ' ', number: ' '})
+    const filterIndex = CheckExistingNames(persons, e.target.value)
+    filterIndex !== -1 ? setPersonFiltered(persons[filterIndex]) : setPersonFiltered({ name: ' ', number: ' '})
   }
   const handleSaveContact = (e) =>{
     e.preventDefault()
-    const nameObject = {
+    let sameNameIndex = CheckExistingNames(persons, newName);
+    const newContact = {
       name: newName,
       number: newNumber
     }
     if(newName !== '' && newNumber !== ''){
-      if(!CheckExistingNames(persons, newName)){
-        setPersons(persons.concat(nameObject))
-        setNewName('')
+      if(sameNameIndex === -1){
+        console.log(sameNameIndex)
+        contacts.create(newContact)
+        .then(response => {
+          console.log(response.data)
+          setPersons(persons.concat(response.data))
+          setMessage({text: `'${newName}' was added to phonebook`, style: 'success'})
+          setTimeout(() => { setMessage(null) }, 5000)
+        })
+      }
+      else if(newNumber !== persons[sameNameIndex].number){
+        let updateId = persons[sameNameIndex].id;
+        if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+          contacts.update(updateId, newContact)
+          .then(response => {
+            if(personFiltered.id===updateId) setPersonFiltered(response.data)
+            setPersons(persons.map((person) => person.id === updateId? response.data : person))
+            setMessage({text:  `Updated phone number for '${newName}'`, style: 'success'})
+            setTimeout(() => { setMessage(null) }, 5000)
+          })
+          .catch(error => {
+            if(personFiltered.id===updateId) setPersonFiltered({ name: ' ', number: ' '})
+            setPersons(persons.filter(person=> person.id !== updateId))
+            setMessage({text: `The contact under the name '${newName}', was already deleted from server`, style: 'error'})
+            setTimeout(() => { setMessage(null) }, 5000)
+          })
+        }
       }
       else{
-        alert(`${newName} is already added to phonebook`)
+        alert(`An exact copy of this contact already exists`)
       }
     }
     else{
       alert(`Fill out name and number`)
     }
   }
-
+  const handleDeleteContact = (id) =>{
+    if (window.confirm("Do you really want to delete?")) {
+      contacts.remove(id)
+      .then(response => {
+        if(personFiltered.id===id) setPersonFiltered({name: ' ', number: ' '})
+        setPersons(persons.filter((person) => person.id !== id))
+      })
+    }
+  }
+  
   return (
     <>
       <h2> Phonebook </h2>
+      <Notification message={successMessage} />
       <ShowFilteredPerson p = {personFiltered} handleFilter={handleFilterChange} />
       <h2> Add new contact </h2>
       <NewPersonForm handleName={handleNameChange} handleNumber={handleNumberChange} onSubmitForm={handleSaveContact} />
       <h2>Numbers</h2>
-      <ShowPeople p = {persons}/>
+      <ShowPeople p = {persons} onDelete={handleDeleteContact}/>
     </>
   )
 }
