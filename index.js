@@ -1,20 +1,20 @@
 const express = require('express');
-const { token } = require('morgan');
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
 const baseUrl = '/api/persons';
 
 
-morgan.token('blah', function (req) { return req.blah })
+morgan.token('newData', function (req) { return req.blah })
 
 app.use(cors())
+app.use(express.static('build'));
 app.use(express.json())
 app.use(displayNewData)
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :blah'));
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :newData'));
 
 function displayNewData (req, res, next) {
-  Object.keys(req.body).length === 0 ? req.blah = ("") : req.blah = JSON.stringify(req.body)
+  Object.keys(req.body).length === 0 ? req.newData = ("") : req.newData = JSON.stringify(req.body)
   next()
 }
 const CheckExistingNames = (persons, newName) => persons.map(person=> person.name.toLowerCase() ).indexOf(newName.toLowerCase());
