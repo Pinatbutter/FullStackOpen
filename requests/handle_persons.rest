@@ -1,16 +1,29 @@
-GET http://localhost:3001/api/persons/3
+GET http://localhost:3001/api/persons/62832b10d4df42bf81df1021
 
 ###
 GET http://localhost:3001/api/persons
 
 ###
-DELETE  http://localhost:3001/api/persons/5
+PUT http://localhost:3001/api/persons/62841d8be6ab99c703103042 HTTP/1.1
+content-type: application/json
+
+{
+    "name": "addd",
+    "number": "3343"
+}
+
+###
+GET http://localhost:3001/api/persons
+
+
+###
+DELETE  http://localhost:3001/api/persons/62832d75d5f1a6c00840df43
 
 ###
 POST http://localhost:3001/api/persons HTTP/1.1
 content-type: application/json
 
 {
-    "name": "ss",
-    "number": "44"
+    "name": "Vaslidateme",
+    "number": "223-699447"
 }
