@@ -52,8 +52,6 @@ const App = () => {
   }
   useEffect(hook, [])
 
-  console.log('render', personFiltered, 'notes')
-
   const handleNameChange  = (e) => setNewName(e.target.value)
   const handleNumberChange  = (e) => setNewNumber(e.target.value)
   const handleFilterChange  = (e) => {
@@ -67,17 +65,22 @@ const App = () => {
       name: newName,
       number: newNumber
     }
+    //If its a new contact lets post
     if(newName !== '' && newNumber !== ''){
       if(sameNameIndex === -1){
-        console.log(sameNameIndex)
         contacts.create(newContact)
         .then(response => {
-          console.log(response.data)
           setPersons(persons.concat(response.data))
-          setMessage({text: `'${newName}' was added to phonebook`, style: 'success'})
+          setMessage({text: `${newName} was added to phonebook`, style: 'success'})
+          setTimeout(() => { setMessage(null) }, 5000)
+        })
+        .catch(error => {
+          setMessage({text: error.response.data.error, style: 'error'})
           setTimeout(() => { setMessage(null) }, 5000)
         })
       }
+
+      //else its a new contact. Is it a new phone number? lets update(post)
       else if(newNumber !== persons[sameNameIndex].number){
         let updateId = persons[sameNameIndex].id;
         if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
@@ -85,17 +88,19 @@ const App = () => {
           .then(response => {
             if(personFiltered.id===updateId) setPersonFiltered(response.data)
             setPersons(persons.map((person) => person.id === updateId? response.data : person))
-            setMessage({text:  `Updated phone number for '${newName}'`, style: 'success'})
+            setMessage({text:  `Updated phone number for ${newName}`, style: 'success'})
             setTimeout(() => { setMessage(null) }, 5000)
           })
           .catch(error => {
             if(personFiltered.id===updateId) setPersonFiltered({ name: ' ', number: ' '})
-            setPersons(persons.filter(person=> person.id !== updateId))
-            setMessage({text: `The contact under the name '${newName}', was already deleted from server`, style: 'error'})
+            //setPersons(persons.filter(person=> person.id !== updateId))
+            //El codigo de arriba era para el error de update algo que fue eliminado(part2)
+            setMessage({text: error.response.data.error, style: 'error'})
             setTimeout(() => { setMessage(null) }, 5000)
           })
         }
       }
+      //else its the same name and number
       else{
         alert(`An exact copy of this contact already exists`)
       }
